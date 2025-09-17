@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aarogya Sarthi — AI Health Chatbot for a Healthier India</title>
+  <link rel="icon" href="Aarogya.png">
+  <meta name="description" content="Aarogya Sarthi — A multilingual AI chatbot delivering preventive healthcare, vaccination reminders, and real-time outbreak alerts to empower communities." />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+  <style>
+    /* --- CSS Variables & Global Styles --- */
+    :root {
+      --primary-green: #2e7d32;
+      --primary-green-dark: #1b5e20;
+      --secondary-teal: #00bcd4;
+      --secondary-teal-dark: #0097a7;
+      --light-green-bg: #f0f7f1;
+      --text-dark: #1a202c;
+      --text-light: #4a5568;
+      --background: #f8fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --shadow: 0 8px 24px rgba(17, 24, 39, 0.06);
+      --shadow-hover: 0 12px 32px rgba(17, 24, 39, 0.12);
+      --font-heading: 'Poppins', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--text-dark);
+      background: var(--background);
+      line-height: 1.6;
+    }
+
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+
+    /* --- Animations & Transitions --- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    
+    /* --- Header & Navigation --- */
+    header {
+      display: flex; align-items: center; justify-content: space-between; padding: 16px 0;
+      position: sticky; top: 0;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      z-index: 1000; border-bottom: 1px solid var(--border-color);
+      transition: box-shadow 0.3s ease;
+    }
+    header.scrolled { box-shadow: var(--shadow); }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand img { width: 50px; height: 50px; border-radius: 8px; }
+    .brand h1 { font-family: var(--font-heading); font-size: 22px; color: var(--primary-green); }
+    nav { display: flex; gap: 8px; align-items: center; }
+    nav a { padding: 8px 16px; border-radius: 8px; font-weight: 600; color: var(--text-light); transition: background-color 0.3s ease, color 0.3s ease; text-decoration: none; }
+    nav a:hover { background-color: var(--light-green-bg); color: var(--primary-green); }
+    /* THIS IS THE NEW HIGHLIGHT STYLE */
+    nav a.active {
+      background: var(--primary-green);
+      color: #fff;
+    }
+    nav a.cta {
+      background: linear-gradient(45deg, var(--secondary-teal), var(--primary-green));
+      color: #fff;
+      transition: all 0.3s ease;
+    }
+    nav a.cta:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(0, 188, 212, 0.4); }
+
+    /* --- Hero Section --- */
+    .hero { display: grid; grid-template-columns: 2fr 1fr; gap: 48px; align-items: center; padding: 60px 0; }
+    .hero-content h2 { font-family: var(--font-heading); color: var(--primary-green-dark); font-size: clamp(2rem, 5vw, 3rem); line-height: 1.2; margin-bottom: 16px; }
+    .hero-content .lead { color: var(--text-light); font-size: 1.1rem; max-width: 600px; margin-bottom: 24px; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; text-decoration: none; }
+    .btn.primary { background: var(--primary-green); color: #fff; }
+    .btn.primary:hover { background: var(--primary-green-dark); transform: translateY(-3px); box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3); }
+    .btn.secondary { background: var(--card-bg); color: var(--primary-green); border-color: var(--border-color); }
+    .btn.secondary:hover { background: var(--light-green-bg); border-color: var(--primary-green); transform: translateY(-3px); }
+    .hero-image-wrapper { text-align: center; }
+    .hero-image-wrapper img { max-width: 100%; border-radius: 12px; box-shadow: var(--shadow); }
+    
+    /* --- Sections & Cards --- */
+    section { padding: 80px 0; }
+    .section-title { text-align: center; font-family: var(--font-heading); color: var(--primary-green-dark); font-size: 2.25rem; margin-bottom: 12px; }
+    .section-subtitle { text-align: center; color: var(--text-light); max-width: 600px; margin: 0 auto 48px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .card { background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); border-top: 4px solid var(--secondary-teal); transition: transform 0.4s ease, box-shadow 0.4s ease; }
+    .card:hover { transform: translateY(-8px); box-shadow: var(--shadow-hover); }
+    .card h3 { font-family: var(--font-heading); color: var(--primary-green-dark); margin-bottom: 12px; font-size: 1.25rem; }
+    ul.checks { list-style: none; display: grid; gap: 12px; }
+    ul.checks li { display: flex; align-items: flex-start; gap: 10px; }
+    ul.checks li::before { content: '✔'; color: var(--primary-green); font-weight: 600; margin-top: 2px; }
+
+    /* --- Use Cases Section (Alternating Layout) --- */
+    .use-case-item { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; margin-bottom: 60px; }
+    .use-case-item:nth-child(even) .use-case-icon { order: 2; }
+    .use-case-icon { font-size: 100px; color: var(--secondary-teal); text-align: center; }
+    .use-case-content h3 { font-family: var(--font-heading); font-size: 1.75rem; color: var(--primary-green-dark); margin-bottom: 12px; }
+    
+    /* --- Tech & Team Cards (3D Effect) --- */
+    .card-3d { transform-style: preserve-3d; }
+    .card-3d:hover { transform: translateY(-8px) perspective(1000px) rotateX(5deg) rotateY(-5deg); box-shadow: var(--shadow-hover); }
+    
+    /* --- Team Section --- */
+    .team-card { text-align: center; padding: 24px; }
+    .team-card img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 4px solid var(--light-green-bg); }
+    .team-card h4 { font-family: var(--font-heading); font-size: 1.1rem; }
+    .team-card .role { color: var(--text-light); font-size: 0.9rem; margin-bottom: 12px; }
+    .social-links a { color: var(--text-light); margin: 0 8px; font-size: 20px; transition: color 0.3s; }
+    .social-links a:hover { color: var(--primary-green); }
+    
+    /* --- NEW CHATBOT DEMO SECTION --- */
+    #chatbot-demo .grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        gap: 48px;
+    }
+    .chat-demo-content { text-align: left; }
+    .chat-demo-content h2 { text-align: left; margin-bottom: 16px; }
+    .chat-demo-content p { margin-bottom: 24px; }
+    #startDemoBtn:disabled { background: #ccc; cursor: not-allowed; }
+    .chat-window {
+        width: 100%; height: 450px;
+        background: #fff; border-radius: 15px;
+        box-shadow: var(--shadow-hover);
+        display: flex; flex-direction: column;
+        overflow: hidden;
+    }
+    .chat-header {
+        background: var(--primary-green); color: #fff;
+        padding: 15px; display: flex; align-items: center; gap: 10px;
+        flex-shrink: 0;
+    }
+    .chat-header img { width: 40px; height: 40px; border-radius: 50%; }
+    .chat-header h4 { font-family: var(--font-heading); font-size: 1rem; }
+    .chat-body { flex-grow: 1; padding: 20px; overflow-y: auto; }
+    .message { display: flex; margin-bottom: 15px; max-width: 80%; animation: popIn 0.3s ease-out; }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    .message-content { padding: 10px 15px; border-radius: 18px; line-height: 1.4; }
+    .bot-message { align-self: flex-start; }
+    .bot-message .message-content { background: var(--light-green-bg); color: var(--text-dark); border-bottom-left-radius: 4px; }
+    .user-message { margin-left: auto; }
+    .user-message .message-content { background: var(--secondary-teal); color: #fff; border-bottom-right-radius: 4px; }
+    .typing-indicator { display: flex; align-items: center; gap: 5px; opacity: 0; transition: opacity 0.3s; }
+    .typing-indicator.active { opacity: 1; }
+    .typing-indicator span { width: 8px; height: 8px; background: #ccc; border-radius: 50%; animation: typing 1s infinite; }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+    /* --- Footer --- */
+    footer { padding: 60px 24px; background: linear-gradient(45deg, var(--primary-green-dark), #00332d); color: #fff; text-align: center; }
+    footer h2, footer p { color: #fff; }
+    footer .btn.secondary { background: rgba(255, 255, 255, 0.1); border-color: #fff; color: #fff; }
+    footer .btn.secondary:hover { background: #fff; color: var(--primary-green-dark); }
+    
+    /* --- Media Queries --- */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; text-align: center; }
+      .hero-content .lead { margin: 0 auto 24px; }
+      .actions { justify-content: center; }
+      header { padding: 16px 24px; }
+      nav { display: none; }
+      .use-case-item, .use-case-item:nth-child(even) { grid-template-columns: 1fr; }
+      .use-case-item:nth-child(even) .use-case-icon { order: 0; }
+      .use-case-icon { margin-bottom: 20px; }
+      #chatbot-demo .grid { grid-template-columns: 1fr; }
+      .chat-demo-content { text-align: center; margin-bottom: 30px; }
+      .chat-demo-content h2 { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <header id="header">
+    <div class="container">
+      <div class="brand">
+        <img src="Aarogya.png" alt="Aarogya Sarthi logo" loading="lazy"/>
+        <h1>Aarogya Sarthi</h1>
+      </div>
+      <nav id="nav">
+        <a href="#about" class="nav-link">About</a>
+        <a href="#chatbot-demo" class="nav-link">Chatbot</a>
+        <a href="#usecases" class="nav-link">Use Cases</a>
+        <a href="#tech" class="nav-link">Tech</a>
+        <a href="#team" class="nav-link">Team</a>
+        <a href="#contact" class="nav-link cta">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero" id="hero" role="region" aria-label="Aarogya Sarthi overview">
+      <div class="hero-content reveal">
+        <h2>Preventive Health, One Conversation at a Time.</h2>
+        <p class="lead">An AI-driven, multilingual chatbot delivering verified healthcare information, vaccination reminders, and outbreak alerts directly to rural communities via WhatsApp & SMS.</p>
+        <div class="actions">
+          <a class="btn primary" href="pdf/workflow.pdf" download><i class='bx bxs-file-pdf'></i> Project Workflow</a>
+          <a class="btn secondary" href="#tech">Technical Deep Dive</a>
+        </div>
+      </div>
+      <div class="hero-image-wrapper reveal">
+        <img src="Aarogya.png" alt="Illustration of a health worker assisting a family using a mobile device" loading="lazy"/>
+      </div>
+    </section>
+  </main>
+  
+  <section id="about" class="page-section">
+    <div class="container">
+      <h2 class="section-title reveal">Our Solution & Impact</h2>
+      <p class="section-subtitle reveal">Bridging the healthcare information gap with technology that is accessible, trustworthy, and scalable.</p>
+      <div class="grid">
+        <div class="card reveal">
+          <h3>The Solution</h3>
+          <ul class="checks">
+            <li>Deliver preventive health education in regional languages.</li>
+            <li>Send personalized vaccination and appointment reminders.</li>
+            <li>Broadcast real-time, geo-targeted outbreak alerts.</li>
+            <li>Ensure access for all via WhatsApp and SMS — no app needed.</li>
+          </ul>
+        </div>
+        <div class="card reveal">
+          <h3>Expected Impact</h3>
+          <ul class="checks">
+            <li>Achieve 80%+ query accuracy with our fine-tuned AI model.</li>
+            <li>Increase health awareness and vaccination uptake by 20%.</li>
+            <li>Reduce the spread of disease with timely, verified alerts.</li>
+            <li>Empower citizens to make informed health decisions.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="chatbot-demo" class="page-section" style="background: var(--light-green-bg);">
+      <div class="container">
+          <div class="grid">
+              <div class="chat-demo-content reveal">
+                  <h2 class="section-title">Experience the Chatbot</h2>
+                  <p class="section-subtitle" style="text-align:left; margin-left:0;">This is a simulated demonstration of a typical conversation with Aarogya Sarthi. Click the button to see it in action!</p>
+                  <button class="btn primary" id="startDemoBtn"><i class='bx bx-play-circle'></i> Start Demo</button>
+              </div>
+              <div class="chat-window-wrapper reveal">
+                  <div class="chat-window">
+                      <div class="chat-header">
+                          <img src="Aarogyabot.png" alt="Aarogya Sarthi bot icon">
+                          <div>
+                            <h4>Aarogya Sarthi</h4>
+                            <small style="opacity: 0.8;">AI Health Assistant</small>
+                          </div>
+                      </div>
+                      <div class="chat-body" id="chatBody">
+                        <div style="text-align: center; color: var(--text-light); margin-top: 30%;">Click 'Start Demo' to begin the conversation.</div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <section id="usecases" class="page-section">
+    <div class="container">
+        <h2 class="section-title reveal">How Aarogya Sarthi Helps</h2>
+        <p class="section-subtitle reveal">Designed to address the most critical public health communication needs with simple, conversational solutions.</p>
+        
+        <div class="use-case-item reveal">
+            <div class="use-case-icon"><i class='bx bx-check-shield'></i></div>
+            <div class="use-case-content">
+                <h3>Symptom Guidance</h3>
+                <p>Users can describe their symptoms in their own language. The chatbot provides verified, preliminary information from government health sources and advises on the appropriate level of care (e.g., "This sounds like something you should discuss at your local PHC."), without ever providing a diagnosis.</p>
+            </div>
+        </div>
+        <div class="use-case-item reveal">
+            <div class="use-case-icon"><i class='bx bxs-injection'></i></div>
+            <div class="use-case-content">
+                <h3>Vaccination Reminders</h3>
+                <p>Parents can register their child's birth date to receive automated reminders for the entire vaccination schedule as per the National Immunization Programme. The chatbot can also provide directions to the nearest vaccination centers.</p>
+            </div>
+        </div>
+        <div class="use-case-item reveal">
+            <div class="use-case-icon"><i class='bx bxs-virus-block' ></i></div>
+            <div class="use-case-content">
+                <h3>Outbreak Alerts</h3>
+                <p>Integrated with state health databases, Aarogya Sarthi can send out geo-targeted alerts in the event of a disease outbreak (like Dengue or Cholera), providing actionable preventive measures and official advisories in the local language.</p>
+            </div>
+        </div>
+    </div>
+  </section>
+  
+  <section id="tech" class="page-section" style="background: var(--light-green-bg);">
+    <div class="container">
+      <h2 class="section-title reveal">Technical Architecture</h2>
+      <p class="section-subtitle reveal">A modern, scalable, and secure stack built for reliability and nationwide deployment.</p>
+      <div class="grid">
+        <div class="card card-3d reveal">
+          <h3><i class='bx bxs-chip'></i> Core Technology Stack</h3>
+          <ul>
+            <li><strong>AI/NLP:</strong> Python, TensorFlow, fine-tuned LLMs (e.g., Llama 3, Gemma) for high-quality conversational AI.</li>
+            <li><strong>Backend:</strong> Node.js/Python (FastAPI) for robust, scalable REST APIs.</li>
+            <li><strong>Messaging:</strong> WhatsApp Cloud API & Twilio for SMS fallback.</li>
+            <li><strong>Database:</strong> PostgreSQL for structured data and user logs.</li>
+          </ul>
+        </div>
+        <div class="card card-3d reveal">
+          <h3><i class='bx bxs-cloud-upload'></i> Integration & Infrastructure</h3>
+          <ul>
+            <li><strong>Translation:</strong> Real-time multilingual support via dedicated translation APIs.</li>
+            <li><strong>Hosting:</strong> Cloud-native deployment on AWS/Azure with auto-scaling.</li>
+            <li><strong>Security:</strong> End-to-end encryption, data minimization, and compliance with data protection laws.</li>
+            <li><strong>Monitoring:</strong> Real-time analytics dashboards for performance and usage insights.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="team" class="page-section">
+    <div class="container">
+      <h2 class="section-title reveal">Meet the Team</h2>
+      <p class="section-subtitle reveal">A passionate group of developers and thinkers dedicated to leveraging technology for social good.</p>
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+        <div class="card team-card card-3d reveal">
+          <img src="https://i.pravatar.cc/150?u=abhishek" alt="Abhishek Ranjan" loading="lazy">
+          <h4>Abhishek Ranjan</h4>
+          <p class="role">Team Lead</p>
+          <div class="social-links">
+            <a href="#" aria-label="LinkedIn"><i class='bx bxl-linkedin-square'></i></a>
+            <a href="#" aria-label="GitHub"><i class='bx bxl-github'></i></a>
+          </div>
+        </div>
+        <div class="card team-card card-3d reveal">
+          <img src="https://i.pravatar.cc/150?u=avinash" alt="Avinash Pandey" loading="lazy">
+          <h4>Avinash Pandey</h4>
+          <p class="role">Collaborator</p>
+           <div class="social-links">
+            <a href="#" aria-label="LinkedIn"><i class='bx bxl-linkedin-square'></i></a>
+            <a href="#" aria-label="GitHub"><i class='bx bxl-github'></i></a>
+          </div>
+        </div>
+        <div class="card team-card card-3d reveal">
+          <img src="https://i.pravatar.cc/150?u=manoj" alt="Manoj K" loading="lazy">
+          <h4>Manoj K</h4>
+          <p class="role">Collaborator</p>
+           <div class="social-links">
+            <a href="#" aria-label="LinkedIn"><i class='bx bxl-linkedin-square'></i></a>
+            <a href="#" aria-label="GitHub"><i class='bx bxl-github'></i></a>
+          </div>
+        </div>
+        <div class="card team-card card-3d reveal">
+          <img src="https://i.pravatar.cc/150?u=lovely" alt="Lovely Gupta" loading="lazy">
+          <h4>Lovely Gupta</h4>
+          <p class="role">Collaborator</p>
+           <div class="social-links">
+            <a href="#" aria-label="LinkedIn"><i class='bx bxl-linkedin-square'></i></a>
+            <a href="#" aria-label="GitHub"><i class='bx bxl-github'></i></a>
+          </div>
+        </div>
+        <div class="card team-card card-3d reveal">
+          <img src="https://i.pravatar.cc/150?u=prashant" alt="Prashant Kumar" loading="lazy">
+          <h4>Prashant Kumar</h4>
+          <p class="role">Collaborator</p>
+           <div class="social-links">
+            <a href="#" aria-label="LinkedIn"><i class='bx bxl-linkedin-square'></i></a>
+            <a href="#" aria-label="GitHub"><i class='bx bxl-github'></i></a>
+          </div>
+        </div>
+         <div class="card team-card card-3d reveal">
+          <img src="https://i.pravatar.cc/150?u=yaashik" alt="Yaashik H" loading="lazy">
+          <h4>Yaashik H</h4>
+          <p class="role">Collaborator</p>
+           <div class="social-links">
+            <a href="#" aria-label="LinkedIn"><i class='bx bxl-linkedin-square'></i></a>
+            <a href="#" aria-label="GitHub"><i class='bx bxl-github'></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer id="contact">
+    <div class="container">
+      <h2 class="section-title" style="color: #fff;">Get in Touch</h2>
+      <p class="section-subtitle" style="color: rgba(255,255,255,0.8);">We'd love to hear from you. Reach out to discuss our project or potential collaborations.</p>
+      <div style="margin-top: 24px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+        <a href="mailto:25f2006898@ds.study.iitm.ac.in" class="btn primary"><i class='bx bx-envelope'></i> Email Us</a>
+        <a href="tel:+918873568557" class="btn secondary" style="background: rgba(255,255,255,0.1); border-color: #fff; color: #fff;"><i class='bx bxl-whatsapp'></i> Contact on WhatsApp</a>
+      </div>
+      <p style="margin-top: 40px; font-size: 0.9rem; color: rgba(255,255,255,0.6);">
+        Built with ❤️ for a Healthier India.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // --- Sticky Header Logic ---
+    const header = document.querySelector('header');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 50) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+
+    // --- On-Scroll Reveal Animation Logic ---
+    const revealElements = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.1
+    });
+
+    revealElements.forEach(el => {
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
+  
+  
