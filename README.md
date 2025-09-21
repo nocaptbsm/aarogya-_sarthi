@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/user-attachments/assets/b2462e92-31d0-4054-9721-399a0ed34fa9" alt="Aarogya Sarthi Logo" width="150"/>
+  <img src="images/Aarogya.png" alt="Aarogya Sarthi Logo" width="150"/>
 </p>
 
 <h1 align="center">Aarogya Sarthi (आरोग्य सारथी) 🩺🤖</h1>
@@ -49,7 +49,7 @@ See Aarogya Sarthi in action! The user experience is designed to be as simple an
 *(Pro-Tip: Replace the image below with a short GIF of your chatbot working. It's highly effective!)*
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/user-attachments/assets/6e2b963a-8fa3-4c91-a5f1-39775a7ab13c" alt="Aarogya Sarthi Demo" width="300"/>
+  <img src="images/Aarogyabot.png" alt="Aarogya Sarthi Demo" width="300"/>
 </p>
 
 ---
