@@ -4,167 +4,102 @@
 
 <h1 align="center">Aarogya Sarthi (आरोग्य सारथी) 🩺🤖</h1>
 
-<p align="center">
-  <strong>Our official solution for the Smart India Hackathon (SIH), engineered to bridge the public healthcare information gap in Odisha through conversational AI.</strong>
-  <br/>
-  <br/>
-  <a href="https://www.sih.gov.in/"><img src="https://img.shields.io/badge/Smart%20India-Hackathon-blue"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Python-3.9+-blue.svg"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Framework-Rasa-orange.svg"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Deployment-Docker-blueviolet.svg"></a>
-  <a href="https://github.com/your-team-repo/Aarogya-Sarthi/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
-</p>
+Aarogya Sarthi: AI-Powered Multilingual Health Assistant
+A comprehensive AI health assistant delivered via WhatsApp and SMS, designed to bridge the healthcare accessibility gap for rural and tribal communities in Odisha.
 
----
+Aarogya Sarthi is a sophisticated yet easy-to-use chatbot that provides instant, reliable, and localized health information. It was developed to tackle the critical challenge of limited access to healthcare professionals and information in remote areas, offering a vital first point of contact for health-related queries.
 
-## 📖 The Challenge: SIH Problem Statement
+🌟 Core Features
+🌐 True Multilingual Support: Fully operational in English, Hindi, Odia, Kui, and Santali, ensuring accessibility for diverse linguistic communities.
 
-This project is our dedicated solution to the following challenge posed by the Government of Odisha.
+🤖 AI-Powered Symptom Checker: Utilizes Google's Gemini AI for a natural, conversational experience. The bot intelligently asks clarifying questions before providing safe, actionable advice, always reminding users to consult a doctor.
 
-* **ID:** `ID25049`
-* **Title:** AI-Driven Public Health Chatbot for Disease Awareness.
-* **Organization:** Government of Odisha
-* **Department:** Electronics & IT Department
-* **Description:** Create a multilingual AI chatbot to educate rural and semi-urban populations about preventive healthcare, disease symptoms, and vaccination schedules. The chatbot should integrate with government health databases and provide real-time alerts for outbreaks.
+🚨 Proactive Outbreak Alerts: Connects to the World Health Organization (WHO) live feed to automatically push translated, location-relevant disease outbreak notifications to users when they start a conversation.
 
----
+💉 Vaccination Reminders: Provides age-appropriate vaccination schedules (infant, child, adult) and uses the Google Maps API to find nearby clinics and hospitals that offer specific vaccines.
 
-## 💡 Our Solution: Aarogya Sarthi
+🌿 Personalized Health Tips: Delivers proactive, seasonal health tips (e.g., monsoon-specific advice for preventing dengue) based on the user's registered district.
 
-**Aarogya Sarthi** is a purpose-built AI health companion designed to empower every citizen of Odisha with instant, reliable, and accessible health information. We deliver this through the platforms they already know and trust—**WhatsApp and SMS**—in their native language, serving as a true digital health `Sarthi` (charioteer).
+👤 Smart Onboarding: A guided, multilingual registration process with validation to seamlessly onboard new users.
 
-### ✨ Our Unique Approach
+🛠️ Technology Stack & Architecture
+This project leverages a modern, scalable backend architecture to deliver a robust user experience.
 
-* **1. Zero Friction Onboarding:** By leveraging WhatsApp & SMS, we eliminate the digital literacy barriers and app-download fatigue common in rural areas.
-* **2. Hyper-Local Intelligence:** Our AI is trained on data specific to Odisha's health landscape, understanding local dialects (Odia), regional diseases, and the state’s healthcare network.
-* **3. A Beacon of Trust:** In an era of misinformation, our chatbot integrates directly with official government health databases, ensuring every piece of information is authenticated and reliable.
-* **4. Engineered for State-Wide Scale:** Our architecture is not just a prototype; it's a production-ready system built with Docker and Kubernetes to serve millions of users reliably during critical public health events.
+Backend: Python, Flask
 
----
+Database: PostgreSQL on Google Cloud SQL
 
-## 📱 How It Works: A Sneak Peek
+AI & NLP: Google Gemini 1.5 Flash
 
-See Aarogya Sarthi in action! The user experience is designed to be as simple and natural as texting a friend.
+Messaging Platform: Twilio API for WhatsApp & SMS
 
-*(Pro-Tip: Replace the image below with a short GIF of your chatbot working. It's highly effective!)*
+Secure Connectivity:
 
-<p align="center">
-  <img src="images/Aarogyabot.png" alt="Aarogya Sarthi Demo" width="300"/>
-</p>
+Cloud SQL Auth Proxy: For secure, authenticated database connections without IP whitelisting.
 
----
+Cloudflare Tunnel: To create a stable, permanent public URL for the local development server, replacing the need for ngrok.
 
-## 🚀 Key Features
+Mapping: Google Maps Places API
 
-* **🌐 Multilingual & Accessible:** Fluent in **Odia**, Hindi, and English to ensure no one is left behind.
-* **🏥 Comprehensive Health Info:** Provides verified information on disease symptoms, preventive care, maternal/child health, and vaccination schedules.
-* **🚨 Real-time Outbreak Alerts:** Connects to state health APIs to broadcast timely alerts about potential outbreaks in a user's locality.
-* **🧠 Intelligent & Empathetic:** Powered by an advanced NLP engine to understand user intent, handle colloquialisms, and provide clear, helpful responses.
-* **🚫 Diagnosis Disclaimer:** Ethically designed to inform and educate, never to diagnose. It consistently guides users to consult with healthcare professionals.
+Information Flow
+User (WhatsApp/SMS) -> Twilio -> Cloudflare Tunnel -> Flask Backend (app.py) -> Feature Modules -> Gemini/Google Maps/Database -> Response to User
 
----
+🚀 Getting Started
+Follow these instructions to get the backend running on your local machine.
 
-## 🛠️ Technology Stack & Architecture
+Prerequisites
+Python 3.10+
 
-We have chosen a modern, open-source, and scalable tech stack for a robust and maintainable solution.
+A Google Cloud account (for Cloud SQL and Maps API)
 
-* **NLP Framework:** **Rasa** (for its powerful, open-source dialogue management)
-* **Backend:** **Python (FastAPI)** (for high-performance API services)
-* **Messaging Gateway:** **Twilio** API for WhatsApp & SMS
-* **Database:** **PostgreSQL**
-* **Deployment:** **Docker** & **Kubernetes**
+A Twilio account
 
-**System Architecture Flow:**
-```
-User (WhatsApp/SMS) -> Twilio Gateway -> Webhook -> Rasa NLP Engine -> Core Application Logic -> Govt. Health APIs/DB -> Response to User
-```
+A Cloudflare account
 
----
+Git
 
-## 📈 Scalability & Deployment Plan
+1. Clone the Repository
+git clone [https://github.com/your-username/aarogya-_sarthi.git](https://github.com/your-username/aarogya-_sarthi.git)
+cd aarogya-_sarthi/aarogya-sarthi-backend
 
-* **Containerization:** The entire application is containerized using **Docker**, ensuring consistency and portability.
-* **Orchestration:** We will use **Kubernetes** to automate deployment, scaling, and management, allowing us to seamlessly handle state-wide user traffic.
-* **CI/CD Pipeline:** A **GitHub Actions** workflow automates testing and deployment, enabling rapid and reliable updates to the service.
+2. Set Up the Environment
+Create a virtual environment:
 
----
+python -m venv venv
 
-## 🛡️ Data Privacy & Ethical AI
+Activate it:
 
-* **Data Privacy:** We are committed to complying with India's **Digital Personal Data Protection (DPDP) Act**. All user data is encrypted in transit and at rest, and personally identifiable information is anonymized.
-* **Bias Mitigation:** Our NLP models are continuously monitored and retrained with diverse datasets to ensure fair and unbiased responses for all citizens.
+Windows: .\venv\Scripts\activate
 
----
+macOS/Linux: source venv/bin/activate
 
-## 🌌 Future Vision
+Install dependencies:
 
-We envision Aarogya Sarthi as a foundational piece of Odisha's digital health future.
+pip install -r requirements.txt
 
-* **Phase 4: ABDM Integration:** Integrate with the **Ayushman Bharat Digital Mission (ABDM)**, allowing users to link their ABHA number for personalized health information and services via the **Unified Health Interface (UHI)**.
-* **Phase 5: Predictive Analytics:** Develop a dashboard for health officials that uses anonymized query data to identify symptom hotspots and predict potential outbreaks.
-* **Phase 6: Voice-Enabled Service:** Integrate a voice module to make the service fully accessible to users with low literacy levels.
+3. Configure Environment Variables
+Create a file named .env in the aarogya-sarthi-backend directory.
 
----
+Copy the contents of .env.example into it and fill in your actual API keys and credentials.
 
-## ▶️ Demo & Presentation
+4. Set Up the Database
+Connect to your Google Cloud SQL instance.
 
-* **Video Demo:** [Link to Your YouTube Project Demo]
-* **Presentation Slides:** [Link to Your Project PPT/PDF]
+Execute the SQL commands in the schema_v2.sql file to create all the necessary tables.
 
----
+5. Run the Services
+You need to run three services in three separate terminal windows:
 
-## 🏆 Our Team: [Team Name Here]
+Terminal 1: Start the Database Proxy
 
-Meet the innovators behind Aarogya Sarthi!
+# Run the command from your start_proxy.bat file
+cloud_sql_proxy -instances=...
 
-| Name             | Role                     | GitHub Profile                               |
-| ---------------- | ------------------------ | -------------------------------------------- |
-| [Abhishek Ranjan] | Team Leader / Backend Dev | [Link to GitHub]                             |
-| [Avinash Pandey]  | NLP / ML Specialist      | [Link to GitHub]                             |
-| [Manoj k]  | Full Stack Developer     | [Link to GitHub]                             |
-| [Yaashik H]  | DevOps / Cloud Engineer  | [Link to GitHub]                             |
-| [Lavli]  | UI/UX & QA               | [Link to GitHub]                             |
-| [Prashant Kumar]  | Domain Researcher        | [Link to GitHub]                             |
+Terminal 2: Start the Cloudflare Tunnel
 
----
+# Run the command from your start_dns.bat file
+cloudflared tunnel run your-tunnel-name
 
-## 🏁 Getting Started (For Developers)
+Terminal 3: Start the Flask Application
 
-Follow these steps to set up the project locally.
-
-1.  **Clone the repository:**
-    ```sh
-    git clone [https://github.com/your-team-repo/Aarogya-Sarthi.git](https://github.com/your-team-repo/Aarogya-Sarthi.git)
-    cd Aarogya-Sarthi
-    ```
-2.  **Set up environment variables:**
-    Create a `.env` file from the `.env.example` and add your configuration details.
-3.  **Run with Docker Compose (Recommended):**
-    ```sh
-    docker-compose up --build
-    ```
-4.  **Train the Rasa model (if needed):**
-    ```sh
-    docker-compose exec rasa rasa train
-    ```
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our `CONTRIBUTING.md` file for guidelines on how to get involved.
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
-
----
-
-## 🙏 Acknowledgements
-
-We extend our sincere gratitude to:
-* **Smart India Hackathon** for this incredible innovation platform.
-* **Government of Odisha** for presenting this critical real-world challenge.
-* Our mentors for their invaluable guidance and support.
+python app.py
