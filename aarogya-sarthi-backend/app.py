@@ -1,22 +1,22 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from database import get_user, add_user, delete_user
 import logging
 import os
-import requests # To make API calls to Gemini
+from dotenv import load_dotenv
 
+from database import get_user, add_user, delete_user
+from location_data import STATES_AND_DISTRICTS
+from symptom_checker import handle_symptom_checker
+from vaccination_reminders import handle_vaccination_reminders
+from outbreak_alerts import get_outbreak_alert
+from preventive_healthcare_tips import get_preventive_tips
+
+load_dotenv()
 app = Flask(__name__)
-
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# --- Gemini AI Configuration ---
-GEMINI_API_KEY = "AIzaSyDAo1z9IA0k3dC8WqWXDasDGfGZ5PQFJco" # Handled by the execution environment, leave as is.
-GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key={GEMINI_API_KEY}"
-GEMINI_SYSTEM_PROMPT = """You are Aarogya Sarthi, a helpful AI health assistant. Your role is to understand a user's health symptoms and ask 2-3 clarifying questions to better understand the situation. Based on the conversation, provide potential next steps or things to look out for. IMPORTANT: You are not a doctor. Do not provide a diagnosis. Always end your response by strongly advising the user to consult a real medical professional for an accurate diagnosis and treatment."""
 
-
-# --- Language Translations ---
+# --- Language & Message Data (remains the same) ---
 MESSAGES = {
     'language_select': (
         "Please select your language:\n"
@@ -29,191 +29,302 @@ MESSAGES = {
     ),
     'en': {
         'welcome': "Welcome to Aarogya Sarthi! To get started, what is your full name?",
-        'ask_age': "Great. What is your age?",
-        'ask_gender': "Thanks. What is your gender?",
-        'ask_state': "Which state do you live in?",
-        'ask_district': "And which district?",
-        'registered': "You are now registered! Thank you. We will now show you the main menu.",
-        'welcome_back': "Welcome back, {name}! How can I help you today?\n\nReply with a number:\n1. Symptom Checker\n2. Vaccination Reminders\n3. Preventive Healthcare Tips\n4. Outbreak Alerts\n5. Exit",
-        'main_menu': "How can I help you today?\n\nReply with a number:\n1. Symptom Checker\n2. Vaccination Reminders\n3. Preventive Healthcare Tips\n4. Outbreak Alerts\n5. Exit",
-        'symptom_checker_start': "You've selected the Symptom Checker. Please describe your symptoms. To exit the checker at any time, just say 'exit'.",
-        'exit_message': "Thank you for using Aarogya Sarthi. Have a healthy day!"
+        'ask_age': "Great. What is your age? Please enter a number (e.g., 25).",
+        'invalid_age': "Sorry, that doesn't look like a valid age. Please enter a number between 1 and 120.",
+        'ask_gender': "Thanks. What is your gender?\n\nReply with a number:\n1. Male\n2. Female\n3. Other",
+        'invalid_gender': "Invalid selection. Please reply with 1, 2, or 3.",
+        'ask_state': "Which state do you live in? Please reply with the number for your state.",
+        'invalid_state': "Invalid selection. Please choose a number from the list.",
+        'ask_district': "And which district? Please reply with the number for your district.",
+        'invalid_district': "Invalid selection. Please choose a number from the list for your state.",
+        'registered': "You are now registered! Thank you.",
+        'welcome_back': "Welcome back to Aarogya Sarthi, {name}! How can I help you today?",
+        'main_menu': ("Reply with a number:\n"
+                      "1. Symptom Checker\n"
+                      "2. Vaccination Reminders\n"
+                      "3. Preventive Healthcare Tips\n"
+                      "4. Outbreak Alerts (Manual Check)\n"
+                      "5. Exit"),
+        'symptom_checker_start': "You've selected the Symptom Checker. Please describe your symptoms. To exit at any time, just say 'exit'.",
+        'exit_message': "Thank you for using Aarogya Sarthi. Have a healthy day!",
+        'outbreak_alert_intro': "⚠️ Health Alert for your area:",
+        'preventive_tips_intro': "🌿 Health Tip for your area:"
     },
+     # ... (other languages remain the same) ...
     'hi': {
         'welcome': "आरोग्य सारथी में आपका स्वागत है! शुरू करने के लिए, आपका पूरा नाम क्या है?",
-        'ask_age': "बढ़िया। आपकी उम्र क्या है?",
-        'ask_gender': "धन्यवाद। आपका लिंग क्या है?",
-        'ask_state': "आप किस राज्य में रहते हैं?",
-        'ask_district': "और कौन सा जिला?",
-        'registered': "अब आप पंजीकृत हो गए हैं! धन्यवाद। अब हम आपको मुख्य मेनू दिखाएंगे।",
-        'welcome_back': "वापस स्वागत है, {name}! मैं आज आपकी कैसे मदद कर सकता हूँ?\n\nएक नंबर के साथ उत्तर दें:\n1. लक्षण परीक्षक\n2. टीकाकरण अनुस्मारक\n3. निवारक स्वास्थ्य युक्तियाँ\n4. प्रकोप अलर्ट\n5. बाहर निकलें",
-        'main_menu': "मैं आज आपकी कैसे मदद कर सकता हूँ?\n\nएक नंबर के साथ उत्तर दें:\n1. लक्षण परीक्षक\n2. टीकाकरण अनुस्मारक\n3. निवारक स्वास्थ्य युक्तियाँ\n4. प्रकोप अलर्ट\n5. बाहर निकलें",
-        'symptom_checker_start': "आपने लक्षण परीक्षक चुना है। कृपया अपने लक्षणों का वर्णन करें। चेकर से किसी भी समय बाहर निकलने के लिए, बस 'exit' कहें।",
-        'exit_message': "आरोग्य सारथी का उपयोग करने के लिए धन्यवाद। आपका दिन स्वस्थ रहे!"
+        'ask_age': "बढ़िया। आपकी उम्र क्या है? कृपया एक संख्या दर्ज करें (जैसे, 25)।",
+        'invalid_age': "क्षमा करें, यह एक वैध उम्र नहीं लगती है। कृपया 1 और 120 के बीच एक संख्या दर्ज करें।",
+        'ask_gender': "धन्यवाद। आपका लिंग क्या है?\n\nएक नंबर के साथ उत्तर दें:\n1. पुरुष\n2. महिला\n3. अन्य",
+        'invalid_gender': "अमान्य चयन। कृपया 1, 2, या 3 के साथ उत्तर दें।",
+        'ask_state': "आप किस राज्य में रहते हैं? कृपया अपने राज्य के लिए नंबर के साथ उत्तर दें।",
+        'invalid_state': "अमान्य चयन। कृपया सूची से एक संख्या चुनें।",
+        'ask_district': "और कौन सा जिला? कृपया अपने जिले के लिए नंबर के साथ उत्तर दें।",
+        'invalid_district': "अमान्य चयन। कृपया अपने राज्य के लिए सूची से एक संख्या चुनें।",
+        'registered': "अब आप पंजीकृत हो गए हैं! धन्यवाद।",
+        'welcome_back': "आरोग्य सारथी में आपका वापस स्वागत है, {name}! मैं आज आपकी कैसे मदद कर सकता हूँ?",
+        'main_menu': ("एक नंबर के साथ उत्तर दें:\n"
+                      "1. लक्षण परीक्षक\n"
+                      "2. टीकाकरण अनुस्मारक\n"
+                      "3. निवारक स्वास्थ्य युक्तियाँ\n"
+                      "4. प्रकोप अलर्ट (मैनुअल जांच)\n"
+                      "5. बाहर निकलें"),
+        'symptom_checker_start': "आपने लक्षण परीक्षक चुना है। कृपया अपने लक्षणों का वर्णन करें। किसी भी समय बाहर निकलने के लिए, बस 'exit' कहें।",
+        'exit_message': "आरोग्य सारथी का उपयोग करने के लिए धन्यवाद। आपका दिन स्वस्थ रहे!",
+        'outbreak_alert_intro': "⚠️ आपके क्षेत्र के लिए स्वास्थ्य चेतावनी:",
+        'preventive_tips_intro': "🌿 आपके क्षेत्र के लिए स्वास्थ्य सुझाव:"
     },
-    # Add other language translations here...
-    'od': {}, 'kui': {}, 'sa': {}
-}
-
-
-# Temporary memory to track conversations
-user_states = {}
-
-def get_gemini_response(chat_history):
-    """Sends a chat history to Gemini and gets the response."""
-    payload = {
-        "contents": chat_history,
-        "systemInstruction": {
-            "parts": [{"text": GEMINI_SYSTEM_PROMPT}]
-        }
+    'od': {
+        'welcome': "ଆରୋଗ୍ୟ ସାରଥିକୁ ସ୍ୱାଗତ! ଆରମ୍ଭ କରିବା ପାଇଁ, ଆପଣଙ୍କର ପୂରା ନାମ କ’ଣ?",
+        'ask_age': "ବହୁତ ଭଲ। ଆପଣଙ୍କ ବୟସ କେତେ? ଦୟାକରି ଏକ ସଂଖ୍ୟା ଦିଅନ୍ତୁ (ଯେପରିକି, 25)।",
+        'invalid_age': "କ୍ଷମା କରନ୍ତୁ, ଏହା ଏକ ବୈଧ ବୟସ ନୁହେଁ। ଦୟାକରି 1 ରୁ 120 ମଧ୍ୟରେ ଏକ ସଂଖ୍ୟା ଦିଅନ୍ତୁ।",
+        'ask_gender': "ଧନ୍ୟବାଦ। ଆପଣଙ୍କ ଲିଙ୍ଗ କ’ଣ?\n\nଏକ ନମ୍ବର ସହିତ ଉତ୍ତର ଦିଅନ୍ତୁ:\n1. ପୁରୁଷ\n2. ମହିଳା\n3. ଅନ୍ୟ",
+        'invalid_gender': "ଅବୈଧ ଚୟନ। ଦୟାକରି 1, 2, କିମ୍ବା 3 ସହିତ ଉତ୍ତର ଦିଅନ୍ତୁ।",
+        'ask_state': "ଆପଣ କେଉଁ ରାଜ୍ୟରେ ରୁହନ୍ତି? ଦୟାକରି ଆପଣଙ୍କ ରାଜ୍ୟ ପାଇଁ ନମ୍ବର ସହିତ ଉତ୍ତର ଦିଅନ୍ତୁ।",
+        'invalid_state': "ଅବୈଧ ଚୟନ। ଦୟାକରି ତାଲିକାରୁ ଏକ ସଂଖ୍ୟା ବାଛନ୍ତୁ।",
+        'ask_district': "ଏବଂ କେଉଁ ଜିଲ୍ଲା? ଦୟାକରି ଆପଣଙ୍କ ଜିଲ୍ଲା ପାଇଁ ନମ୍ବର ସହିତ ଉତ୍ତର ଦିଅନ୍ତୁ।",
+        'invalid_district': "ଅବୈଧ ଚୟନ। ଦୟାକରି ଆପଣଙ୍କ ରାଜ୍ୟ ପାଇଁ ତାଲିକାରୁ ଏକ ସଂଖ୍ୟା ବାଛନ୍ତୁ।",
+        'registered': "ଆପଣ ବର୍ତ୍ତମାନ ପଞ୍ଜିକୃତ ହୋଇଛନ୍ତି! ଧନ୍ୟବାଦ।",
+        'welcome_back': "ଆରୋଗ୍ୟ ସାରଥିକୁ ପୁନର୍ବାର ସ୍ୱାଗତ, {name}! ଆଜି ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରେ?",
+        'main_menu': ("ଏକ ନମ୍ବର ସହିତ ଉତ୍ତର ଦିଅନ୍ତୁ:\n"
+                      "1. ଲକ୍ଷଣ ଯାଞ୍ଚକାରୀ\n"
+                      "2. ଟୀକାକରଣ ସ୍ମାରକ\n"
+                      "3. ନିରାକରଣ ସ୍ୱାସ୍ଥ୍ୟ ପରାମର୍ଶ\n"
+                      "4. ପ୍ରକୋପ ସତର୍କତା (ମାନୁଆଲ ଯାଞ୍ଚ)\n"
+                      "5. ବାହାରିଯାଆନ୍ତୁ"),
+        'symptom_checker_start': "ଆପଣ ଲକ୍ଷଣ ଯାଞ୍ଚକାରୀ ବାଛିଛନ୍ତି। ଦୟାକରି ଆପଣଙ୍କର ଲକ୍ଷଣ ବର୍ଣ୍ଣନା କରନ୍ତୁ। ଯେକୌଣସି ସମୟରେ ବାହାରିବାକୁ, କେବଳ 'exit' କୁହନ୍ତୁ।",
+        'exit_message': "ଆରୋଗ୍ୟ ସାରଥି ବ୍ୟବହାର କରିଥିବାରୁ ଧନ୍ୟବାଦ। ଆପଣଙ୍କ ଦିନ ସୁସ୍ଥ ରହୁ!",
+        'outbreak_alert_intro': "⚠️ ଆପଣଙ୍କ ଅଞ୍ଚଳ ପାଇଁ ସ୍ୱାସ୍ଥ୍ୟ ସତର୍କତା:",
+        'preventive_tips_intro': "🌿 ଆପଣଙ୍କ ଅଞ୍ଚଳ ପାଇଁ ସ୍ୱାସ୍ଥ୍ୟ ପରାମର୍ଶ:"
+    },
+    'kui': {
+        'welcome': "ଆରୋଗ୍ୟ ସାରଥିକେ ସ୍ୱାଗତ୍! ଆରମ୍ଭ କରବାକେ, ଆପଣାର୍ ନାମ୍ କାଣା?",
+        'ask_age': "ଭଲ୍। ଆପଣାର୍ ବୟସ କେତେ? ଦୟାକରି ଗୁଟେ ସଂଖ୍ୟା ଦିଅନ୍ତୁ (ଯେନ୍ତା, 25)।",
+        'invalid_age': "ମାଫ୍ କରବେ, ଇଟା ଗୁଟେ ଠିକ୍ ବୟସ ନୁହେଁ। ଦୟାକରି 1 ରୁ 120 ଭିତରେ ଗୁଟେ ସଂଖ୍ୟା ଦିଅନ୍ତୁ।",
+        'ask_gender': "ଧନ୍ୟବାଦ। ଆପଣାର୍ ଲିଙ୍ଗ କାଣା?\n\nଗୁଟେ ନମ୍ବର ସାଙ୍ଗେ ଉତ୍ତର ଦିଅନ୍ତୁ:\n1. ପୁରୁଷ୍\n2. ମହିଳା\n3. ଅନ୍ୟ",
+        'invalid_gender': "ଭୁଲ୍ ଚୟନ୍। ଦୟାକରି 1, 2, କିମ୍ବା 3 ସାଙ୍ଗେ ଉତ୍ତର ଦିଅନ୍ତୁ।",
+        'ask_state': "ଆପଣ୍ କେନ୍ ରାଜ୍ୟରେ ରହୁଛନ୍? ଦୟାକରି ଆପଣାର୍ ରାଜ୍ୟର୍ ଲାଗି ନମ୍ବର ସାଙ୍ଗେ ଉତ୍ତର ଦିଅନ୍ତୁ।",
+        'invalid_state': "ଭୁଲ୍ ଚୟନ୍। ଦୟାକରି ତାଲିକାରୁ ଗୁଟେ ସଂଖ୍ୟା ବାଛନ୍ତୁ।",
+        'ask_district': "ଆର୍ କେନ୍ ଜିଲ୍ଲା? ଦୟାକରି ଆପଣାର୍ ଜିଲ୍ଲା ଲାଗି ନମ୍ବର ସାଙ୍ଗେ ଉତ୍ତର ଦିଅନ୍ତୁ।",
+        'invalid_district': "ଭୁଲ୍ ଚୟନ୍। ଦୟାକରି ଆପଣାର୍ ରାଜ୍ୟ ଲାଗି ତାଲିକାରୁ ଗୁଟେ ସଂଖ୍ୟା ବାଛନ୍ତୁ।",
+        'registered': "ଆପଣ୍ ଏବେ ପଞ୍ଜିକୃତ ହେଇଗଲେ! ଧନ୍ୟବାଦ।",
+        'welcome_back': "ଆରୋଗ୍ୟ ସାରଥିକେ ଫେର୍ ସ୍ୱାଗତ୍, {name}! ଆଜି ମୁଇଁ ଆପଣାର୍ କେନ୍ତା ସାହାଯ୍ୟ କର୍ମି?",
+        'main_menu': ("ଗୁଟେ ନମ୍ବର ସାଙ୍ଗେ ଉତ୍ତର ଦିଅନ୍ତୁ:\n"
+                      "1. ଲକ୍ଷଣ ଯାଞ୍ଚ୍\n"
+                      "2. ଟୀକା ସ୍ମାରକ\n"
+                      "3. ସ୍ୱାସ୍ଥ୍ୟ ପରାମର୍ଶ\n"
+                      "4. ପ୍ରକୋପ ସତର୍କତା\n"
+                      "5. ବାହାର୍"),
+        'symptom_checker_start': "ଆପଣ୍ ଲକ୍ଷଣ ଯାଞ୍ଚ୍ ବାଛିଛନ୍। ଦୟାକରି ଆପଣାର୍ ଲକ୍ଷଣ ବିଷୟରେ କହନ୍ତୁ। ଯେକେନ୍ ସମୟରେ ବାହାର୍ବାକେ, 'exit' କହନ୍ତୁ।",
+        'exit_message': "ଆରୋଗ୍ୟ ସାରଥି ବ୍ୟବହାର୍ କର୍ଥିବାରୁ ଧନ୍ୟବାଦ। ଆପଣାର୍ ଦିନ୍ ସୁସ୍ଥ ରହୁ!",
+        'outbreak_alert_intro': "⚠️ ଆପଣାର୍ ଅଞ୍ଚଲ୍ ଲାଗି ସ୍ୱାସ୍ଥ୍ୟ ସତର୍କତା:",
+        'preventive_tips_intro': "🌿 ଆପଣାର୍ ଅଞ୍ଚଲ୍ ଲାଗି ସ୍ୱାସ୍ଥ୍ୟ ପରାମର୍ଶ:"
+    },
+    'sa': {
+        'welcome': "ᱟᱨᱚᱜᱭᱚ ᱥᱟᱨᱛᱷᱤ ᱨᱮ ᱥᱟᱹᱜᱩᱱ ᱫᱟᱨᱟᱢ! ᱮᱛᱚᱦᱚᱵᱽ ᱞᱟᱹᱜᱤᱫ, ᱟᱢᱟᱜ ᱯᱩᱨᱟᱹ ᱧᱩᱛᱩᱢ ᱫᱚ ᱪᱮᱫ?",
+        'ask_age': "ᱵᱮᱥ། ᱟᱢᱟᱜ ᱵᱚᱭᱚᱥ ᱛᱤᱱᱟᱹᱜ? ᱫᱟᱭᱟᱠᱟᱛᱮ ᱢᱤᱫᱴᱟᱹᱝ ᱱᱚᱢᱵᱚᱨ ᱮᱢᱚᱜ ᱢᱮ (ᱡᱮᱞᱠᱟ, 25)᱾",
+        'invalid_age': "ᱤᱠᱟᱹ ᱠᱟᱹᱧ ᱢᱮ, ᱱᱚᱣᱟ ᱫᱚ ճիշᱴ ᱵᱚᱭᱚᱥ ᱵᱟᱝ ᱠᱟᱱᱟ᱾ ᱫᱟᱭᱟᱠᱟᱛᱮ 1 ᱟᱨ 120 ᱛᱟᱞᱟ ᱨᱮ ᱢᱤᱫᱴᱟᱹᱝ ᱱᱚᱢᱵᱚᱨ ᱮᱢᱚᱜ ᱢᱮ᱾",
+        'ask_gender': "ᱥᱟᱨᱦᱟᱣ། ᱟᱢᱟᱜ ᱡᱟᱹᱛᱤ ᱫᱚ ᱪᱮᱫ?\n\nᱢᱤᱫᱴᱟᱹᱝ ᱱᱚᱢᱵᱚᱨ ᱛᱮ ᱛᱮᱞᱟ ᱮᱢᱚᱜ ᱢᱮ:\n1. ᱠᱚᱲᱟ\n2. ᱠᱩᱲᱤ\n3. ᱮᱴᱟᱜ",
+        'invalid_gender': "ᱵᱷᱩᱞ ᱵᱟᱪᱷᱱᱟᱣ། ᱫᱟᱭᱟᱠᱟᱛᱮ 1, 2, ᱥᱮ 3 ᱛᱮ ᱛᱮᱞᱟ ᱮᱢᱚᱜ ᱢᱮ᱾",
+        'ask_state': "ᱟᱢ ᱚᱠᱟ ରାଜ୍ୟ ᱨᱮᱢ ᱛᱟᱦᱮᱱᱟ? ᱫᱟᱭᱟᱠᱟᱛᱮ ᱟᱢᱟᱜ ରାଜ୍ୟ ᱞᱟᱹᱜᱤᱫ ᱱᱚᱢᱵᱚᱨ ᱛᱮ ᱛᱮᱞᱟ ᱮᱢᱚᱜ ᱢᱮ᱾",
+        'invalid_state': "ᱵᱷᱩᱞ ᱵᱟᱪᱷᱱᱟᱣ། ᱫᱟᱭᱟᱠᱟᱛᱮ ᱞᱤᱥᱴ ᱠᱷᱚᱱ ᱢᱤᱫᱴᱟᱹᱝ ᱱᱚᱢᱵᱚᱨ ᱵᱟᱪᱷᱟᱣ ᱢᱮ᱾",
+        'ask_district': "ᱟᱨ ᱚᱠᱟ ᱡᱤᱞᱞᱟ? ᱫᱟᱭᱟᱠᱟᱛᱮ ᱟᱢᱟᱜ ᱡᱤᱞᱞᱟ ᱞᱟᱹଗᱤᱫ ᱱᱚᱢᱵᱚᱨ ᱛᱮ ᱛᱮᱞା ᱮᱢᱚᱜ ᱢᱮ᱾",
+        'invalid_district': "ᱵᱷᱩᱞ ᱵᱟᱪᱷᱱᱟᱣ། ᱫᱟᱭାᱠᱟᱛᱮ ᱟᱢᱟᱜ ରାଜ୍ୟ ᱞᱟᱹᱜᱤᱫ ᱞᱤᱥᱴ ᱠᱷᱚᱱ ᱢᱤᱫᱴᱟᱹᱝ ᱱᱚᱢᱵᱚᱨ ᱵᱟᱪᱷᱟᱣ ᱢᱮ᱾",
+        'registered': "ᱟᱢ ᱱᱤᱛᱚᱜ ᱯଞ୍ଜᱤᱠୃᱛ ᱮᱱᱟᱢ! ᱥᱟᱨᱦᱟᱣ།",
+        'welcome_back': "ᱟᱨᱚᱜᱭᱚ ᱥᱟᱨᱛᱷᱤ ᱨᱮ ᱟᱨᱦᱚᱸ ᱥᱟᱹᱜᱩᱱ ᱫᱟᱨᱟᱢ, {name}! ᱛᱮᱦᱮᱧ ᱤᱧ ᱟᱢᱟᱜ ᱪᱮᱫ ᱜᱚᱲᱚ ᱫᱟᱲᱮᱭᱟᱢᱟ?",
+        'main_menu': ("ᱢᱤᱫᱴᱟᱹᱝ ᱱᱚᱢᱵᱚᱨ ᱛᱮ ᱛᱮᱞᱟ ᱮᱢᱚᱜ ᱢᱮ:\n"
+                      "1. ախտանիշների ստուգում\n"
+                      "2. պատվաստումների հիշեցումներ\n"
+                      "3. կանխարգելիչ առողջապահական խորհուրդներ\n"
+                      "4. համաճարակային ահազանգեր\n"
+                      "5. Ելք"),
+        'symptom_checker_start': "ᱟᱢ ախտանիշների ստուգում ᱮᱢ ᱵᱟᱪᱷᱟᱣ ᱠᱮᱫᱟ᱾ ᱫᱟᱭᱟᱠᱟᱛᱮ ᱟᱢᱟᱜ ախտանիշները նկարագրիր։ Ցանկացած պահի դուրս գալու համար պարզապես ասա 'exit'։",
+        'exit_message': "ᱟᱨᱚਗᱭᱚ ᱥᱟᱨᱛᱷᱤ ᱵ୍ୟବହାର ᱞᱟᱹᱜᱤᱫ ᱥᱟᱨᱦᱟᱣ། ᱟᱢᱟᱜ ᱫᱤᱱ ᱱᱟᱯᱟᱭ ᱛᱟᱦᱮᱱ!",
+        'outbreak_alert_intro': "⚠️ ᱟᱢᱟᱜ ᱮᱞᱟᱠᱟ ᱞᱟᱹᱜᱤᱫ ᱥᱣᱟᱥᱛᱷᱚ  cảnh báo:",
+        'preventive_tips_intro': "🌿 ᱟᱢᱟᱜ ᱮᱞᱟକା ᱞᱟᱹᱜᱤᱫ ᱥᱣᱟᱥᱛᱷᱚ পরামর্শ:"
     }
-    try:
-        response = requests.post(GEMINI_API_URL, json=payload)
-        response.raise_for_status() # Raises an exception for bad status codes
-        result = response.json()
-        return result['candidates'][0]['content']['parts'][0]['text']
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Gemini API request failed: {e}")
-        return "Sorry, I'm having trouble connecting to my AI brain right now. Please try again later."
-    except (KeyError, IndexError) as e:
-        logging.error(f"Error parsing Gemini response: {e} - Response: {response.text}")
-        return "Sorry, I received an unusual response from the AI. Please try again."
-
+}
+user_states = {}
 
 @app.route("/")
 def index():
     return "<h1>Aarogya Sarthi Backend is Running!</h1>"
 
+def list_paginated(items, page_num=1, page_size=10):
+    start = (page_num - 1) * page_size
+    end = start + page_size
+    paginated_items = items[start:end]
+    response_text = ""
+    for i, item in enumerate(paginated_items, start + 1):
+        response_text += f"{i}. {item}\n"
+    if end < len(items):
+        response_text += f"\nReply with 'more' to see the next page."
+    return response_text
+
 @app.route("/message", methods=['POST'])
 def reply():
     try:
         from_number = request.values.get('From', '')
-        incoming_msg = request.values.get('Body', '').strip()
+        incoming_msg = request.values.get('Body', '').strip().lower()
         resp = MessagingResponse()
         
         user = get_user(from_number)
         state_info = user_states.get(from_number, {})
         current_state = state_info.get('state')
-        lang = state_info.get('lang', 'en') if not user else (user[8] if user and len(user) > 8 and user[8] else 'en')
-
-        # --- Symptom Checker Logic ---
-        if current_state == 'awaiting_symptoms':
-            if incoming_msg.lower() == 'exit':
-                del user_states[from_number]
-                resp.message(MESSAGES[lang]['main_menu'])
-            else:
-                # Continue the conversation with Gemini
-                chat_history = state_info.get('symptom_chat_history', [])
-                chat_history.append({"role": "user", "parts": [{"text": incoming_msg}]})
-                
-                ai_response = get_gemini_response(chat_history)
-                
-                chat_history.append({"role": "model", "parts": [{"text": ai_response}]})
-                state_info['symptom_chat_history'] = chat_history
-                resp.message(ai_response)
         
-        # --- Main Logic (Registration & Menu) ---
-        elif user:
-            # Existing user logic
-            if current_state == 'awaiting_menu_choice':
-                if incoming_msg == '1':
-                    # Start Symptom Checker
-                    resp.message(MESSAGES[lang]['symptom_checker_start'])
-                    user_states[from_number] = {
-                        'state': 'awaiting_symptoms', 
-                        'lang': lang, 
-                        'symptom_chat_history': []
-                    }
-                elif incoming_msg == '2': resp.message("Vaccination Reminders feature is coming soon!")
-                elif incoming_msg == '3': resp.message("Preventive Healthcare Tips feature is coming soon!")
-                elif incoming_msg == '4': resp.message("Outbreak Alerts feature is coming soon!")
-                elif incoming_msg == '5':
-                     del user_states[from_number]
-                     resp.message(MESSAGES[lang]['exit_message'])
-                else: 
-                    resp.message("Invalid option. Please reply with a number from 1 to 5.")
-            else:
-                resp.message(MESSAGES[lang]['welcome_back'].format(name=user[1]))
+        lang = state_info.get('lang', 'en')
+        if user:
+            lang = user[7] if len(user) > 7 and user[7] else 'en'
+
+        if incoming_msg == 'menu':
+            if from_number in user_states: del user_states[from_number]
+            if user:
+                resp.message(MESSAGES[lang]['welcome_back'].format(name=user[2]))
+                resp.message(MESSAGES[lang]['main_menu'])
                 user_states[from_number] = {'state': 'awaiting_menu_choice', 'lang': lang}
-        else:
-            # New user registration logic
-            if current_state is None and incoming_msg.lower() == 'hi':
-                resp.message(MESSAGES['language_select'])
-                user_states[from_number] = {'state': 'awaiting_language'}
+            return str(resp)
+
+        if current_state == 'awaiting_symptoms':
+            response_text = handle_symptom_checker(user, state_info, incoming_msg, lang, MESSAGES)
+            resp.message(response_text)
+            if "exit" in incoming_msg:
+                 if from_number in user_states: del user_states[from_number]
+                 user_states[from_number] = {'state': 'awaiting_menu_choice', 'lang': lang}
+            return str(resp)
+        
+        elif current_state == 'awaiting_vaccine_choice':
+            response_text = handle_vaccination_reminders(user, state_info, incoming_msg, lang, MESSAGES)
+            resp.message(response_text)
+            if user_states.get(from_number, {}).get('state') != 'awaiting_vaccine_choice':
+                 resp.message(MESSAGES[lang]['main_menu'])
+                 user_states[from_number] = {'state': 'awaiting_menu_choice', 'lang': lang}
+            return str(resp)
+
+        elif user:
+            if not current_state:
+                alert_message = get_outbreak_alert(user, lang)
+                if alert_message:
+                    resp.message(alert_message)
+                tips_message = get_preventive_tips(user, lang, MESSAGES)
+                if tips_message:
+                    resp.message(tips_message)
             
-            elif current_state == 'awaiting_language':
-                # ... (language selection logic remains the same) ...
-                if incoming_msg == '1': lang = 'en'
-                elif incoming_msg == '2': lang = 'hi'
-                elif incoming_msg == '3': lang = 'od'
-                elif incoming_msg == '4': lang = 'kui'
-                elif incoming_msg == '5': lang = 'sa'
+            if current_state in [None, 'awaiting_menu_choice']:
+                if incoming_msg in ['1','2','3','4','5']:
+                    user_states[from_number] = {'lang': lang}
+                    if incoming_msg == '1':
+                        user_states[from_number]['state'] = 'awaiting_symptoms'
+                        resp.message(MESSAGES[lang]['symptom_checker_start'])
+                    elif incoming_msg == '2':
+                        user_states[from_number]['state'] = 'awaiting_vaccine_choice'
+                        response_text = handle_vaccination_reminders(user, user_states[from_number], "start", lang, MESSAGES)
+                        resp.message(response_text)
+                    elif incoming_msg == '3':
+                        tips_message = get_preventive_tips(user, lang, MESSAGES)
+                        resp.message(tips_message or "No specific tips available at the moment.")
+                        resp.message(MESSAGES[lang]['main_menu'])
+                        user_states[from_number]['state'] = 'awaiting_menu_choice'
+                    elif incoming_msg == '4':
+                        alert_message = get_outbreak_alert(user, lang)
+                        resp.message(alert_message or "No active alerts for your country at this time.")
+                        resp.message(MESSAGES[lang]['main_menu'])
+                        user_states[from_number]['state'] = 'awaiting_menu_choice'
+                    elif incoming_msg == '5':
+                        if from_number in user_states: del user_states[from_number]
+                        resp.message(MESSAGES[lang]['exit_message'])
                 else:
-                    resp.message("Invalid selection. " + MESSAGES['language_select'])
-                    return str(resp)
-                user_states[from_number] = {'state': 'awaiting_name', 'lang': lang}
-                resp.message(MESSAGES[lang]['welcome'])
-
-            elif current_state == 'awaiting_name':
-                state_info['name'] = incoming_msg
-                resp.message(MESSAGES[lang]['ask_age'])
-                state_info['state'] = 'awaiting_age'
-            
-            elif current_state == 'awaiting_age':
-                state_info['age'] = incoming_msg
-                resp.message(MESSAGES[lang]['ask_gender'])
-                state_info['state'] = 'awaiting_gender'
-            
-            elif current_state == 'awaiting_gender':
-                state_info['gender'] = incoming_msg
-                resp.message(MESSAGES[lang]['ask_state'])
-                state_info['state'] = 'awaiting_state'
-
-            elif current_state == 'awaiting_state':
-                state_info['state_name'] = incoming_msg
-                resp.message(MESSAGES[lang]['ask_district'])
-                state_info['state'] = 'awaiting_district'
-
-            elif current_state == 'awaiting_district':
-                state_info['district'] = incoming_msg
-                try:
-                    add_user(
-                        mobile=from_number, name=state_info['name'],
-                        age=int(state_info['age']), gender=state_info['gender'],
-                        state=state_info['state_name'], district=state_info['district'], 
-                        language=lang
-                    )
-                    resp.message(MESSAGES[lang]['registered'])
-                    # Transition to main menu after registration
+                    resp.message(MESSAGES[lang]['welcome_back'].format(name=user[2]))
                     resp.message(MESSAGES[lang]['main_menu'])
                     user_states[from_number] = {'state': 'awaiting_menu_choice', 'lang': lang}
-                except Exception as e:
-                    resp.message(f"Sorry, there was a database error: {e}")
-                    if from_number in user_states:
-                        del user_states[from_number]
-            else:
-                resp.message("Welcome! Please say 'hi' to start.")
-                
+        else:
+            if current_state is None and incoming_msg == 'hi':
+                resp.message(MESSAGES['language_select'])
+                user_states[from_number] = {'state': 'awaiting_language'}
+            elif current_state == 'awaiting_language':
+                if incoming_msg in ['1','2','3','4','5']:
+                    lang_map = {'1':'en', '2':'hi', '3':'od', '4':'kui', '5':'sa'}
+                    lang = lang_map[incoming_msg]
+                    user_states[from_number] = {'state': 'awaiting_name', 'lang': lang}
+                    resp.message(MESSAGES[lang]['welcome'])
+                else: resp.message("Invalid selection. " + MESSAGES['language_select'])
+            elif current_state == 'awaiting_name':
+                state_info['name'] = request.values.get('Body', '').strip()
+                resp.message(MESSAGES[lang]['ask_age'])
+                state_info['state'] = 'awaiting_age'
+            elif current_state == 'awaiting_age':
+                try:
+                    age = int(incoming_msg)
+                    if 1 <= age <= 120:
+                        state_info['age'] = age
+                        resp.message(MESSAGES[lang]['ask_gender'])
+                        state_info['state'] = 'awaiting_gender'
+                    else: resp.message(MESSAGES[lang]['invalid_age'])
+                except ValueError: resp.message(MESSAGES[lang]['invalid_age'])
+            
+            # --- MODIFIED REGISTRATION FLOW ---
+            elif current_state == 'awaiting_gender':
+                gender_map = {'1': 'Male', '2': 'Female', '3': 'Other'}
+                if incoming_msg in gender_map:
+                    state_info['gender'] = gender_map[incoming_msg]
+                    
+                    # Set state to Odisha by default
+                    selected_state = "Odisha"
+                    state_info['selected_state'] = selected_state
+                    
+                    # Ask for district directly
+                    district_list_text = f"{MESSAGES[lang]['ask_district']}\n\n"
+                    districts = STATES_AND_DISTRICTS[selected_state]
+                    district_list = list_paginated(districts)
+                    
+                    resp.message(district_list_text + district_list)
+                    state_info['state'] = 'awaiting_district'
+                    state_info['district_page'] = 1
+                else:
+                    resp.message(MESSAGES[lang]['invalid_gender'])
+            
+            # This block is now skipped
+            # elif current_state == 'awaiting_state': ...
+
+            elif current_state == 'awaiting_district':
+                selected_state = state_info.get('selected_state')
+                districts = STATES_AND_DISTRICTS.get(selected_state, [])
+                page = state_info.get('district_page', 1)
+                if incoming_msg == 'more':
+                    page += 1
+                    district_list = list_paginated(districts, page_num=page)
+                    resp.message(district_list); state_info['district_page'] = page
+                else:
+                    try:
+                        choice = int(incoming_msg)
+                        if 1 <= choice <= len(districts):
+                            selected_district = districts[choice - 1]
+                            add_user(mobile=from_number, name=state_info['name'], age=state_info['age'], gender=state_info['gender'], state=selected_state, district=selected_district, language=lang)
+                            newly_registered_user = get_user(from_number)
+                            resp.message(MESSAGES[lang]['registered'])
+                            resp.message(MESSAGES[lang]['welcome_back'].format(name=newly_registered_user[2]))
+                            resp.message(MESSAGES[lang]['main_menu'])
+                            user_states[from_number] = {'state': 'awaiting_menu_choice', 'lang': lang}
+                        else: resp.message(MESSAGES[lang]['invalid_district'])
+                    except (ValueError, TypeError): resp.message(MESSAGES[lang]['invalid_district'])
+            else: resp.message("Welcome! Please say 'hi' to start.")
         return str(resp)
 
     except Exception as e:
         logging.error(f"FATAL ERROR for number {request.values.get('From', '')}: {e}", exc_info=True)
         debug_resp = MessagingResponse()
-        debug_resp.message(f"An unexpected error occurred in the backend. Please show this to the developer: {e}")
+        error_message = f"An unexpected error occurred. Please show this to the developer: {e}"
+        debug_resp.message(error_message)
         return str(debug_resp)
-
 
 @app.route("/delete_me")
 def delete_my_data():
-    my_number = "whatsapp:+918917226958" # Replace with your number in E.164 format
+    my_number = os.environ.get("MY_NUMBER")
+    if not my_number: return "MY_NUMBER not set in .env"
     try:
         delete_user(my_number)
-        if my_number in user_states:
-            del user_states[my_number]
+        if my_number in user_states: del user_states[my_number]
         return f"User data for {my_number} has been deleted."
-    except Exception as e:
-        return f"Error deleting user: {e}"
+    except Exception as e: return f"Error deleting user: {e}"
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
-
